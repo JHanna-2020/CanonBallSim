@@ -1,0 +1,6 @@
+# Ignore macOS hidden USB metadata files
+._*
+.DS_Store
+
+# Ignore CMake generated build folders
+cmake-build-*/
