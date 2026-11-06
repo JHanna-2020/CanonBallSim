@@ -4,3 +4,4 @@
 
 # Ignore CMake generated build folders
 cmake-build-*/
+venv/
