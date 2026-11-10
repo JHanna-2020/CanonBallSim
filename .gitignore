@@ -12,4 +12,4 @@ venv/
 *.csv
 trajectory.csv
 # bazel generated artificats
-bazel-*
+bazel-*CODE_REVIEW.md
