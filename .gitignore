@@ -1,7 +1,15 @@
 # Ignore macOS hidden USB metadata files
 ._*
 .DS_Store
-
+# IDE files
+.idea/
+*.iml
+.vscode/
 # Ignore CMake generated build folders
 cmake-build-*/
 venv/
+# simulation data and outputs
+*.csv
+trajectory.csv
+# bazel generated artificats
+bazel-*
