@@ -1,108 +1,63 @@
-import streamlit as st
-import pandas as pd
-import matplotlib.pyplot as plt
-import subprocess
-import os
+import math
+from dash import Dash, Input, Output, dcc, html
+import plotly.graph_objects as go
+from sim_cpp import sim_engine
 
-st.set_page_config(page_title="Cannonball Sim", layout="wide")
-st.title("3D Cannonball Simulation")
 
-st.sidebar.header("Simulation Parameters")
-v0 = st.sidebar.number_input("Initial Velocity (m/s)", min_value=1.0, value=50.0)
-theta = st.sidebar.slider("Launch Angle (Theta - deg)", 0.0, 90.0, 45.0)
-phi = st.sidebar.slider("Azimuth Angle (Phi - deg)", 0.0, 360.0, 90.0)
-dt = st.sidebar.number_input("Time Step (dt)", min_value=0.001, value=0.01, format="%.3f")
-total_time = st.sidebar.number_input("Max Flight Time (s)", min_value=0.1, value=10.0)
+def run(v0: float, theta_deg: float, phi_deg: float) -> list[list[float]]:
+    theta_rad = math.radians(theta_deg)
+    phi_rad = math.radians(phi_deg)
+    return sim_engine.run_simulation([v0, theta_rad, phi_rad])
 
-# Initialize Session State
-if "df" not in st.session_state:
-    st.session_state.df = None
-if "error_msg" not in st.session_state:
-    st.session_state.error_msg = None
-if "landed" not in st.session_state:
-    st.session_state.landed = False
 
-if st.sidebar.button("Fire Cannon!"):
-    # Clear previous state on new run
-    st.session_state.error_msg = None
-    st.session_state.df = None
-    st.session_state.landed = False
+app = Dash(__name__)
 
-    executable_path = "./cmake-build-debug/sim_executable"
+app.layout = html.Div(
+    style={"fontFamily": "sans-serif", "maxWidth": "1000px", "margin": "0 auto", "padding": "20px"},
+    children=[
+        html.H2("3D Cannonball Simulation"),
+        html.Label("Initial Velocity (m/s)"),
+        dcc.Slider(id="v0-slider", min=5, max=150, step=1, value=50, marks={5: "5", 50: "50", 100: "100", 150: "150"}),
+        html.Label("Launch Angle Theta (deg)"),
+        dcc.Slider(id="theta-slider", min=1, max=89, step=1, value=45, marks={1: "1°", 45: "45°", 89: "89°"}),
+        html.Label("Azimuth Angle Phi (deg)"),
+        dcc.Slider(id="phi-slider", min=0, max=360, step=5, value=30, marks={0: "0°", 90: "90°", 180: "180°", 270: "270°", 360: "360°"}),
+        html.Div(id="impact-summary", style={"marginTop": "16px", "fontWeight": "bold"}),
+        dcc.Graph(id="trajectory-plot", style={"height": "650px"}),
+    ],
+)
 
-    with st.spinner("Running C++ Physics Engine..."):
-        try:
-            if os.path.exists("trajectory.csv"):
-                os.remove("trajectory.csv")
 
-            with open("config.txt", "w") as f:
-                f.write(f"{v0} {theta} {phi} {dt} {total_time}")
+@app.callback(
+    Output("trajectory-plot", "figure"),
+    Output("impact-summary", "children"),
+    Input("v0-slider", "value"),
+    Input("theta-slider", "value"),
+    Input("phi-slider", "value"),
+)
+def update_simulation(v0: float, theta_deg: float, phi_deg: float):
+    trajectory = run(v0, theta_deg, phi_deg)
+    xs = [s[0] for s in trajectory]
+    ys = [s[1] for s in trajectory]
+    zs = [s[2] for s in trajectory]
 
-            result = subprocess.run([executable_path], check=True, capture_output=True, text=True, timeout=5)
+    fig = go.Figure(
+        data=[go.Scatter3d(x=xs, y=ys, z=zs, mode="lines", line=dict(width=5, color="firebrick"))]
+    )
+    fig.update_layout(
+        scene=dict(
+            xaxis_title="X Distance (m)",
+            yaxis_title="Y Distance (m)",
+            zaxis_title="Z Height (m)",
+            aspectmode="data",
+        ),
+        margin=dict(l=0, r=0, t=20, b=0),
+    )
 
-            output_lines = result.stdout.splitlines()
-            if "landed" in output_lines:
-                st.session_state.landed = True
-            elif "max_time" in output_lines:
-                st.session_state.landed = False
-            else:
-                # Treat a missing status line as a firm error
-                raise ValueError("C++ binary did not return a valid landing status.")
+    impact = trajectory[-1]
+    summary = f"Steps: {len(trajectory)} | Impact: ({impact[0]:.2f} m, {impact[1]:.2f} m, {impact[2]:.2f} m)"
+    return fig, summary
 
-            if os.path.exists("trajectory.csv"):
-                st.session_state.df = pd.read_csv("trajectory.csv")
-            else:
-                st.session_state.error_msg = "C++ ran, but trajectory.csv was not generated."
 
-        except subprocess.TimeoutExpired:
-            st.session_state.error_msg = "Simulation timed out! Check for infinite loops."
-        except subprocess.CalledProcessError as e:
-            st.session_state.error_msg = f"C++ simulation failed!\nError Output: {e.stderr}"
-        # Added pd.errors.ParserError to catch ragged CSV rows
-        except (pd.errors.EmptyDataError, pd.errors.ParserError):
-            st.session_state.error_msg = "The generated trajectory.csv file is empty or corrupted."
-        except OSError as e:
-            st.session_state.error_msg = f"File or execution error: {e}"
-        except ValueError as e:
-            st.session_state.error_msg = str(e)
-
-# Rendering Block
-if st.session_state.error_msg:
-    st.error(st.session_state.error_msg)
-
-# Only show the success plot if there is no error sitting above it
-elif st.session_state.df is not None:
-    df = st.session_state.df
-
-    # Catch 1-row flights before plotting
-    if len(df) < 2:
-        st.warning("No flight: fewer than two data points. Check the launch angle and time step.")
-    else:
-        fig = plt.figure(figsize=(10, 6))
-        ax = fig.add_subplot(111, projection='3d')
-        ax.plot(df['x'], df['z'], df['y'], color='firebrick', linewidth=2.5)
-
-        span = max(df['x'].max() - df['x'].min(), df['z'].max() - df['z'].min(), df['y'].max(), 1.0)
-        cx = (df['x'].max() + df['x'].min()) / 2
-        cz = (df['z'].max() + df['z'].min()) / 2
-        ax.set_xlim(cx - span/2, cx + span/2)
-        ax.set_ylim(cz - span/2, cz + span/2)
-        ax.set_zlim(0, span)
-
-        ax.set_box_aspect([1, 1, 1])
-
-        ax.set_xlabel('X Distance (m)')
-        ax.set_ylabel('Z Depth (m)')
-        ax.set_zlabel('Y Height (m)')
-
-        st.pyplot(fig)
-
-        if st.session_state.landed:
-            st.success("Target hit! Trajectory rendered successfully.")
-        else:
-            # The empty df check is no longer needed here
-            last_y = df.iloc[-1]['y']
-            st.warning(f"Max flight time reached in mid-air! Ball was still {last_y:.1f}m high.")
-
-        st.subheader("Trajectory Data Table")
-        st.dataframe(df, width="stretch")
+if __name__ == "__main__":
+    app.run(debug=False)

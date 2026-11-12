@@ -1,19 +1,32 @@
 #include "CannonBall.h"
+#include <stdexcept>
+
+namespace {
+    enum StateIndex {
+        X = 0,
+        Y = 1,
+        Z = 2,
+        VX = 3,
+        VY = 4,
+        VZ = 5
+    };
+}
 
 CannonBall::CannonBall(const std::vector<double>& initial_state)
-    : state_vector(initial_state) {}
+    : state_vector(initial_state) {
+    if (state_vector.size() != 6) {
+        throw std::invalid_argument("initial_state must contain 6 elements: [x, y, z, vx, vy, vz]");
+    }
+}
 
 void CannonBall::update_state(double dt, double gravity) {
-    // state_vector = [x, y, z, vx, vy, vz]
-    // Position updates: p = p + v * dt
-    state_vector[0] += state_vector[3] * dt; // x += vx * dt
-    state_vector[1] += state_vector[4] * dt; // y += vy * dt
-    state_vector[2] += state_vector[5] * dt; // z += vz * dt
+    state_vector[X] += state_vector[VX] * dt;
+    state_vector[Y] += state_vector[VY] * dt;
+    state_vector[Z] += state_vector[VZ] * dt;
 
-    // Velocity update: gravity acts downwards on vz
-    state_vector[5] -= gravity * dt;         // vz -= g * dt
+    state_vector[VZ] -= gravity * dt;
 }
 
 bool CannonBall::has_hit_ground() const {
-    return state_vector[2] <= 0.0; // z <= 0
+    return state_vector[Z] <= 0.0;
 }
