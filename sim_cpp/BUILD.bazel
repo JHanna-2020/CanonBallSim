@@ -1,0 +1,29 @@
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
+load("@nanobind_bazel//:build_defs.bzl", "nanobind_extension")
+
+package(default_visibility = ["//visibility:public"])
+
+cc_library(
+    name = "physics_engine",
+    srcs = [
+        "src/CannonBall.cpp",
+        "src/Simulation.cpp",
+    ],
+    hdrs = [
+        "include/CannonBall.h",
+        "include/Simulation.h",
+    ],
+    includes = ["include"],
+)
+
+nanobind_extension(
+    name = "sim_engine",
+    srcs = ["src/bindings.cpp"],
+    deps = [":physics_engine"],
+)
+
+cc_binary(
+    name = "main",
+    srcs = ["src/main.cpp"],
+    deps = [":physics_engine"],
+)
