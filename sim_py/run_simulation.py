@@ -2,8 +2,11 @@ import math
 from dash import Dash, Input, Output, dcc, html
 import plotly.graph_objects as go
 from sim_cpp import sim_engine
+import random
 
 
+_rng = random.Random(42)
+def run_batch(v0: float, theata)
 def run(v0: float, theta_deg: float, phi_deg: float) -> list[list[float]]:
     theta_rad = math.radians(theta_deg)
     phi_rad = math.radians(phi_deg)

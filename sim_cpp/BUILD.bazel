@@ -18,7 +18,7 @@ cc_library(
 
 nanobind_extension(
     name = "sim_engine",
-    srcs = ["src/bindings.cpp"],
+    srcs = ["src/sim_bindings.cpp"],
     deps = [":physics_engine"],
 )
 

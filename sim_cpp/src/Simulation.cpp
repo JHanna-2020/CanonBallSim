@@ -1,6 +1,8 @@
 #include "Simulation.h"
 #include "CannonBall.h"
+#include <algorithm>
 #include <cmath>
+#include <thread>
 
 std::vector<std::vector<double>> run_simulation(const std::vector<double>& initial_conditions) {
     double v0 = initial_conditions[0];
@@ -24,3 +26,31 @@ std::vector<std::vector<double>> run_simulation(const std::vector<double>& initi
     trajectory.push_back(ball.state_vector); // final impact point
     return trajectory;
 }
+std::vector<std::vector<std::vector<double>>> run_multiple_simulations(
+    const std::vector<std::vector<double>> & batch_initial_conditions){
+        std::size_t n_balls = batch_initial_conditions.size();
+        std::vector<std::vector<std::vector<double>>> results(n_balls);
+        if(n_balls == 0){
+            return results;
+        }
+        unsigned int hw_threads = std::thread::hardware_concurrency();
+        std::size_t num_threads = std::min<std::size_t>(
+            n_balls, hw_threads > 0 ? hw_threads : 4 
+        );
+        std::vector<std::thread> threads;
+        threads.reserve(num_threads);
+
+        for(std::size_t t = 0; t < num_threads; ++t){
+            threads.emplace_back([&, t](){
+                for(std::size_t i = t; i < n_balls; i+= num_threads){
+                    results[i] = run_simulation(batch_initial_conditions[i]);
+                }
+            });
+        }
+        for(auto& thread : threads){
+            thread.join();
+        }
+        return results;
+
+    }
+

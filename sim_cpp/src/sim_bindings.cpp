@@ -13,4 +13,11 @@ NB_MODULE(sim_engine, m) {
         nb::arg("initial_conditions"),
         "Integrates projectile trajectory until ground impact"
     );
+    m.def(
+        "run_multiple_simulations",
+        &run_multiple_simulations,
+        nb::arg("batch_initial_conditions"),
+        "Integrates multiple projectile trajectories in parallel until ground impact"
+    );
+    
 }

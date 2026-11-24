@@ -14,3 +14,5 @@ trajectory.csv
 # bazel generated artificats
 bazel-*
 CODE_REVIEW.md
+*.claude
+.mcp.json

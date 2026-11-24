@@ -33,6 +33,19 @@ class TestSimulation(unittest.TestCase):
         final_x, final_y = trajectory[-1][0], trajectory[-1][1]
         self.assertAlmostEqual(final_x, 0.0, places=4)
         self.assertGreater(final_y, 200.0)
+    def test_multiple_simulations_parallel(self):
+        batch = [
+            [50.0, math.radians(45.0), 0.0],
+            [30.0, math.radians(60.0), math.radians(45.0)],
+            [80.0, math.radians(30.0), math.radians(90.0)],
+        ]
+        results = sim_engine.run_multiple_simulations(batch)
+        self.assertEqual(len(results), len(batch))
+
+        for params, traj in zip(batch, results):
+            single_traj = sim_engine.run_simulation(params)
+            self.assertEqual(len(traj), len(single_traj))
+            self.assertEqual(traj[-1], single_traj[-1]) 
 
 
 if __name__ == "__main__":
