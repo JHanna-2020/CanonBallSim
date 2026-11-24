@@ -1,0 +1,18 @@
+load("@rules_python//python:defs.bzl", "py_binary", "py_test")
+py_binary(
+    name = "run_simulation",
+    srcs = ["run_simulation.py"],
+    deps = [
+        "//sim_cpp:sim_engine",
+        "@pypi//dash",
+        "@pypi//plotly",
+    ],
+)
+
+py_test(
+    name = "test_simulation",
+    srcs = ["tests/test_simulation.py"],
+    deps = [
+        "//sim_cpp:sim_engine",
+    ],
+)
