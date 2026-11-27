@@ -43,6 +43,8 @@ app.layout = html.Div(
         dcc.Slider(id="theta-slider", min=1, max=89, step=1, value=45, marks={1: "1°", 45: "45°", 89: "89°"}),
         html.Label("Azimuth Angle Phi (deg)"),
         dcc.Slider(id="phi-slider", min=0, max=360, step=5, value=30, marks={0: "0°", 90: "90°", 180: "180°", 270: "270°", 360: "360°"}),
+        html.Label("Number of Balls"),
+        dcc.Slider(id="balls-slider", min=1, max=30, step=1, value=1, marks={1: "1", 10: "10", 20: "20", 30: "30"}),
         html.Div(id="impact-summary", style={"marginTop": "16px", "fontWeight": "bold"}),
         dcc.Graph(id="trajectory-plot", style={"height": "650px"}),
     ],
@@ -55,16 +57,17 @@ app.layout = html.Div(
     Input("v0-slider", "value"),
     Input("theta-slider", "value"),
     Input("phi-slider", "value"),
+    Input("balls-slider", "value")
 )
-def update_simulation(v0: float, theta_deg: float, phi_deg: float):
-    trajectory = run(v0, theta_deg, phi_deg)
-    xs = [s[0] for s in trajectory]
-    ys = [s[1] for s in trajectory]
-    zs = [s[2] for s in trajectory]
-
-    fig = go.Figure(
-        data=[go.Scatter3d(x=xs, y=ys, z=zs, mode="lines", line=dict(width=5, color="firebrick"))]
-    )
+def update_simulation(v0: float, theta_deg: float, phi_deg: float, num_balls : int):
+    trajectories = run_batch(v0, theta_deg, phi_deg, num_balls)
+    traces = []
+    for trajectory in trajectories:
+        xs = [s[0] for s in trajectory]
+        ys = [s[1] for s in trajectory]
+        zs = [s[2] for s in trajectory]
+        traces.append(go.Scatter3d(x=xs, y=ys, z=zs, mode="lines", line=dict(width=3), showlegend=False))
+    fig = go.Figure(data=traces)
     fig.update_layout(
         scene=dict(
             xaxis_title="X Distance (m)",
@@ -75,8 +78,8 @@ def update_simulation(v0: float, theta_deg: float, phi_deg: float):
         margin=dict(l=0, r=0, t=20, b=0),
     )
 
-    impact = trajectory[-1]
-    summary = f"Steps: {len(trajectory)} | Impact: ({impact[0]:.2f} m, {impact[1]:.2f} m, {impact[2]:.2f} m)"
+    # summary = f"Steps: {len(trajectory)} | Impact: ({impact[0]:.2f} m, {impact[1]:.2f} m, {impact[2]:.2f} m)"
+    summary = f"Balls: {len(trajectories)}"
     return fig, summary
 
 if __name__ == "__main__":
