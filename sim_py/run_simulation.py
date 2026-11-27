@@ -4,9 +4,27 @@ import plotly.graph_objects as go
 from sim_cpp import sim_engine
 import random
 
-
+V0_SIGMA = 1.0
+THETA_SIGMA_DEG = 0.5
+PHI_SIGMA_DEG = 1.0 
 _rng = random.Random(42)
-def run_batch(v0: float, theata)
+V0_MIN = 0.1
+THETA_MIN_DEG = 1.0
+THETA_MAX_DEG = 89.0
+def run_batch(v0: float, theta_deg, phi_deg, num_balls):
+    if num_balls == 1:
+        return[run(v0, theta_deg, phi_deg)]
+    else:
+        batch = []
+        for _ in range(num_balls):
+            v0_i = _rng.gauss(v0, V0_SIGMA)
+            theta_i = _rng.gauss(theta_deg, THETA_SIGMA_DEG)
+            phi_i = _rng.gauss(phi_deg, PHI_SIGMA_DEG)
+            v0_i = max(V0_MIN, v0_i)
+            theta_i = max(THETA_MIN_DEG, min(theta_i, THETA_MAX_DEG))
+            batch.append([v0_i, math.radians(theta_i), math.radians(phi_i)])
+        return sim_engine.run_multiple_simulations(batch)
+
 def run(v0: float, theta_deg: float, phi_deg: float) -> list[list[float]]:
     theta_rad = math.radians(theta_deg)
     phi_rad = math.radians(phi_deg)
@@ -60,7 +78,6 @@ def update_simulation(v0: float, theta_deg: float, phi_deg: float):
     impact = trajectory[-1]
     summary = f"Steps: {len(trajectory)} | Impact: ({impact[0]:.2f} m, {impact[1]:.2f} m, {impact[2]:.2f} m)"
     return fig, summary
-
 
 if __name__ == "__main__":
     app.run(debug=False)
